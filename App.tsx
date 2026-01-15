@@ -1,23 +1,23 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { 
-  ViewState, 
-  Ingredient, 
-  Recipe, 
+import {
+  ViewState,
+  Ingredient,
+  Recipe,
   UserPreferences,
   UserProfile,
   MealPlan,
   DayOfWeek,
   MealSlot
 } from './types';
-import { 
-  INITIAL_PREFERENCES, 
-  COMMON_STAPLES, 
-  MOCK_RECIPES 
+import {
+  INITIAL_PREFERENCES,
+  COMMON_STAPLES,
+  MOCK_RECIPES
 } from './constants';
-import { 
-  generateRecipesFromPantry, 
-  generateWeeklyPlan 
+import {
+  generateRecipesFromPantry,
+  generateWeeklyPlan
 } from './geminiService';
 
 const DAYS: DayOfWeek[] = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
@@ -34,53 +34,69 @@ const EMPTY_PLAN: MealPlan = {
   Sunday: { Breakfast: null, Lunch: null, Dinner: null },
 };
 
-const Navbar: React.FC<{ 
-  currentView: ViewState; 
-  onNavigate: (view: ViewState) => void 
-}> = ({ currentView, onNavigate }) => (
-  <header className="sticky top-0 z-50 flex items-center justify-between whitespace-nowrap bg-white/80 backdrop-blur-md px-6 py-4 lg:px-16 border-b border-slate-100 transition-colors duration-200 print:hidden">
-    <div className="flex items-center gap-12">
-      <div 
-        className="flex items-center gap-2 text-primary cursor-pointer"
-        onClick={() => onNavigate('landing')}
-      >
-        <div className="size-8 flex items-center justify-center bg-primary rounded-lg">
-          <span className="material-symbols-outlined !text-[20px] text-white font-black">nutrition</span>
+const Navbar: React.FC<{
+  currentView: ViewState;
+  onNavigate: (view: ViewState) => void
+}> = ({ currentView, onNavigate }) => {
+  const [clickCount, setClickCount] = useState(0);
+
+  const handleGetStarted = () => {
+    const newCount = clickCount + 1;
+    setClickCount(newCount);
+
+    // "more than 2 times click" -> on the 3rd click (count > 2)
+    if (newCount > 2) {
+      onNavigate('landing');
+      setClickCount(0); // Reset after successful redirect?
+    } else {
+      onNavigate('pantry');
+    }
+  };
+
+  return (
+    <header className="sticky top-0 z-50 flex items-center justify-between whitespace-nowrap bg-white/80 backdrop-blur-md px-6 py-4 lg:px-16 border-b border-slate-100 transition-colors duration-200 print:hidden">
+      <div className="flex items-center gap-12">
+        <div
+          className="flex items-center gap-2 text-primary cursor-pointer"
+          onClick={() => onNavigate('landing')}
+        >
+          <div className="size-8 flex items-center justify-center bg-primary rounded-lg">
+            <span className="material-symbols-outlined !text-[20px] text-white font-black">nutrition</span>
+          </div>
+          <h2 className="text-xl font-black leading-tight tracking-[-0.03em] text-slate-900">CookAI</h2>
         </div>
-        <h2 className="text-xl font-black leading-tight tracking-[-0.03em] text-slate-900">CookAI</h2>
+        {currentView !== 'landing' && (
+          <nav className="hidden md:flex items-center gap-8">
+            {[
+              { id: 'recommendations', label: 'Recipes' },
+              { id: 'shopping-list', label: 'Meal Planner' },
+              { id: 'pantry', label: 'My Pantry' },
+              { id: 'profile', label: 'Profile' }
+            ].map((link) => (
+              <button
+                key={link.id}
+                onClick={() => onNavigate(link.id as ViewState)}
+                className={`text-sm font-bold tracking-tight transition-colors ${currentView === link.id ? 'text-primary' : 'text-slate-600 hover:text-primary'
+                  }`}
+              >
+                {link.label}
+              </button>
+            ))}
+          </nav>
+        )}
       </div>
-      {currentView !== 'landing' && (
-        <nav className="hidden md:flex items-center gap-8">
-          {[
-            { id: 'recommendations', label: 'Recipes' },
-            { id: 'shopping-list', label: 'Meal Planner' },
-            { id: 'pantry', label: 'My Pantry' },
-            { id: 'profile', label: 'Profile' }
-          ].map((link) => (
-            <button
-              key={link.id}
-              onClick={() => onNavigate(link.id as ViewState)}
-              className={`text-sm font-bold tracking-tight transition-colors ${
-                currentView === link.id ? 'text-primary' : 'text-slate-600 hover:text-primary'
-              }`}
-            >
-              {link.label}
-            </button>
-          ))}
-        </nav>
-      )}
-    </div>
-    <div className="flex items-center gap-6">
-      <button className="text-sm font-black text-slate-900">Log In</button>
-      <button 
-        onClick={() => onNavigate('pantry')}
-        className="bg-primary text-white text-sm font-black px-6 py-2.5 rounded-lg hover:bg-primary-hover transition-all shadow-lg shadow-primary/20"
-      >
-        Get Started
-      </button>
-    </div>
-  </header>
-);
+      <div className="flex items-center gap-6">
+        <button className="text-sm font-black text-slate-900">Log In</button>
+        <button
+          onClick={handleGetStarted}
+          className="bg-primary text-white text-sm font-black px-6 py-2.5 rounded-lg hover:bg-primary-hover transition-all shadow-lg shadow-primary/20"
+        >
+          Get Started
+        </button>
+      </div>
+    </header>
+  );
+};
 
 const Footer = () => (
   <footer className="w-full py-12 text-center text-slate-400 text-sm border-t border-slate-100 bg-white mt-auto print:hidden">
@@ -114,7 +130,7 @@ const App: React.FC = () => {
   const [recommendations, setRecommendations] = useState<Recipe[]>(MOCK_RECIPES);
   const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
   const [preferences, setPreferences] = useState<UserPreferences>(INITIAL_PREFERENCES);
-  
+
   // Updated avatar with the provided image URL
   const initialProfile: UserProfile = {
     fullName: 'Jane Doe',
@@ -127,7 +143,7 @@ const App: React.FC = () => {
   const [userProfile, setUserProfile] = useState<UserProfile>(initialProfile);
   const [savedUserProfile, setSavedUserProfile] = useState<UserProfile>(initialProfile);
   const [savedPreferences, setSavedPreferences] = useState<UserPreferences>(preferences);
-  
+
   const [isGenerating, setIsGenerating] = useState(false);
   const [hideInPantry, setHideInPantry] = useState(false);
   const [pendingSlot, setPendingSlot] = useState<{ day: DayOfWeek; slot: MealSlot } | null>(null);
@@ -141,10 +157,10 @@ const App: React.FC = () => {
 
   const shoppingItems = useMemo(() => {
     const items: Record<string, { name: string; amount: number; unit: string; recipes: string[]; category: string }> = {};
-    if (!mealPlan) return []; 
+    if (!mealPlan) return [];
 
     Object.values(mealPlan).forEach(day => {
-      if (!day) return; 
+      if (!day) return;
       Object.values(day).forEach(recipe => {
         if (!recipe) return;
         recipe.ingredients.forEach(ing => {
@@ -152,7 +168,7 @@ const App: React.FC = () => {
           const amountMatch = ing.amount.match(/^(\d+(?:\.\d+)?)\s*(.*)$/);
           const qty = amountMatch ? parseFloat(amountMatch[1]) : 1;
           const unit = amountMatch ? amountMatch[2].trim() : (ing.amount || 'unit');
-          
+
           if (!items[key]) {
             items[key] = { name: ing.name, amount: 0, unit, recipes: [], category: 'Other' };
             const name = key;
@@ -211,7 +227,7 @@ const App: React.FC = () => {
     if (pendingSlot) {
       setMealPlan(prev => ({
         ...prev,
-        [pendingSlot.day]: { ...prev[pendingSlot.day], [pendingSlot.slot]: recipe } 
+        [pendingSlot.day]: { ...prev[pendingSlot.day], [pendingSlot.slot]: recipe }
       }));
       setPendingSlot(null);
       setView('shopping-list');
@@ -261,7 +277,7 @@ const App: React.FC = () => {
       <section className="relative pt-12 pb-20 lg:pt-24 lg:pb-32 overflow-hidden">
         <div className="absolute top-0 right-0 -z-10 h-[600px] w-[600px] translate-x-1/3 -translate-y-1/4 rounded-full bg-primary/5 blur-[100px]"></div>
         <div className="absolute bottom-0 left-0 -z-10 h-[400px] w-[400px] -translate-x-1/3 translate-y-1/4 rounded-full bg-blue-400/5 blur-[100px]"></div>
-        
+
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 gap-12 lg:grid-cols-2 lg:gap-8 items-center">
             <div className="flex flex-col gap-8 max-w-2xl mx-auto lg:mx-0 text-center lg:text-left">
@@ -278,13 +294,13 @@ const App: React.FC = () => {
                 </p>
               </div>
               <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
-                <button 
+                <button
                   onClick={() => setView('pantry')}
                   className="flex h-12 items-center justify-center gap-2 rounded-lg bg-primary px-8 text-base font-bold text-slate-900 shadow-lg shadow-primary/25 transition-all hover:bg-primary-hover hover:-translate-y-0.5"
                 >
                   Get Started Free
                 </button>
-                <button 
+                <button
                   onClick={() => setView('pantry')}
                   className="flex h-12 items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-8 text-base font-bold text-text-main shadow-sm transition-all hover:bg-slate-50 hover:border-slate-300"
                 >
@@ -294,7 +310,7 @@ const App: React.FC = () => {
               </div>
               <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 pt-4">
                 <div className="flex -space-x-3">
-                  {[1,2,3].map(i => (
+                  {[1, 2, 3].map(i => (
                     <div key={i} className="h-10 w-10 overflow-hidden rounded-full border-[3px] border-white bg-slate-200">
                       <img src={`https://i.pravatar.cc/150?u=${i}`} alt="user" className="h-full w-full object-cover" />
                     </div>
@@ -305,13 +321,13 @@ const App: React.FC = () => {
                 </div>
                 <div className="flex flex-col items-center sm:items-start">
                   <div className="flex text-yellow-400 text-[14px]">
-                    {[1,2,3,4,5].map(i => <span key={i} className="material-symbols-outlined fill-current" style={{fontVariationSettings: "'FILL' 1"}}>star</span>)}
+                    {[1, 2, 3, 4, 5].map(i => <span key={i} className="material-symbols-outlined fill-current" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>)}
                   </div>
                   <p className="text-sm font-medium text-slate-400">Trusted by 10,000+ home cooks</p>
                 </div>
               </div>
             </div>
-            
+
             <div className="relative w-full lg:h-auto perspective-1000">
               <div className="absolute -right-4 top-10 -z-10 h-full w-full rounded-2xl bg-primary/20 blur-xl"></div>
               <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl transition-transform hover:scale-[1.01] duration-500">
@@ -337,7 +353,7 @@ const App: React.FC = () => {
                   </div>
                 </div>
               </div>
-              <div className="absolute -bottom-6 -right-6 hidden lg:flex items-center gap-3 rounded-xl bg-white p-4 shadow-2xl border border-slate-100 animate-bounce" style={{animationDuration: '3s'}}>
+              <div className="absolute -bottom-6 -right-6 hidden lg:flex items-center gap-3 rounded-xl bg-white p-4 shadow-2xl border border-slate-100 animate-bounce" style={{ animationDuration: '3s' }}>
                 <div className="flex -space-x-2">
                   <div className="h-8 w-8 rounded-full bg-red-100 border-2 border-white flex items-center justify-center text-xs">🍅</div>
                   <div className="h-8 w-8 rounded-full bg-yellow-100 border-2 border-white flex items-center justify-center text-xs">🧀</div>
@@ -371,13 +387,13 @@ const App: React.FC = () => {
                 </div>
                 <div className="flex h-16 bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm focus-within:ring-2 focus-within:ring-primary/20 transition-all">
                   <div className="flex items-center px-4 text-slate-400"><span className="material-symbols-outlined">search</span></div>
-                  <input id="pantry-search-input" className="flex-1 bg-transparent border-none focus:ring-0 text-lg font-medium" placeholder="Eggs, Spinach, Chicken..." onKeyDown={e => e.key === 'Enter' && (handleAddToPantry((e.target as HTMLInputElement).value), (e.target as HTMLInputElement).value = '')}/>
+                  <input id="pantry-search-input" className="flex-1 bg-transparent border-none focus:ring-0 text-lg font-medium" placeholder="Eggs, Spinach, Chicken..." onKeyDown={e => e.key === 'Enter' && (handleAddToPantry((e.target as HTMLInputElement).value), (e.target as HTMLInputElement).value = '')} />
                   <button onClick={() => { const i = document.getElementById('pantry-search-input') as HTMLInputElement; handleAddToPantry(i.value); i.value = ''; }} className="bg-primary hover:bg-primary-hover px-10 text-white font-black text-lg">Add</button>
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-6">
                   {COMMON_STAPLES.map((staple) => (
                     <div key={staple.name} onClick={() => handleAddToPantry(staple.name)} className="bg-white border border-slate-100 rounded-3xl p-8 flex flex-col items-center gap-4 cursor-pointer hover:shadow-xl transition-all group">
-                      <div className="size-16 rounded-full flex items-center justify-center bg-slate-50 group-hover:scale-110 transition-transform"><span className="material-symbols-outlined text-3xl" style={{color: staple.color}}>{staple.icon}</span></div>
+                      <div className="size-16 rounded-full flex items-center justify-center bg-slate-50 group-hover:scale-110 transition-transform"><span className="material-symbols-outlined text-3xl" style={{ color: staple.color }}>{staple.icon}</span></div>
                       <span className="font-black text-slate-800 text-lg">{staple.name}</span>
                     </div>
                   ))}
@@ -394,28 +410,28 @@ const App: React.FC = () => {
                       <div key={item.id} className="flex items-center gap-4 p-4 rounded-2xl bg-slate-50">
                         <div className="flex-1 font-black text-slate-900 truncate">{item.name}</div>
                         <div className="flex items-center bg-white border border-slate-100 rounded-xl px-2 py-1">
-                          <button onClick={() => setPantry(p => p.map(i => i.id === item.id ? {...i, quantity: Math.max(0, i.quantity - 1)} : i).filter(i => i.quantity > 0))} className="size-8">-</button>
+                          <button onClick={() => setPantry(p => p.map(i => i.id === item.id ? { ...i, quantity: Math.max(0, i.quantity - 1) } : i).filter(i => i.quantity > 0))} className="size-8">-</button>
                           <span className="w-8 text-center font-black">{item.quantity}</span>
-                          <button onClick={() => setPantry(p => p.map(i => i.id === item.id ? {...i, quantity: i.quantity + 1} : i))} className="size-8">+</button>
+                          <button onClick={() => setPantry(p => p.map(i => i.id === item.id ? { ...i, quantity: i.quantity + 1 } : i))} className="size-8">+</button>
                         </div>
                       </div>
                     ))}
                   </div>
                   <div className="p-8">
-                    <button onClick={async () => { 
-                      setIsGenerating(true); 
-                      setErrorMessage(null); 
-                      try { 
-                        const recs = await generateRecipesFromPantry(pantry.map(p => p.name), preferences); 
-                        setRecommendations(recs); 
-                        setView('recommendations'); 
-                      } catch(e: any) { 
+                    <button onClick={async () => {
+                      setIsGenerating(true);
+                      setErrorMessage(null);
+                      try {
+                        const recs = await generateRecipesFromPantry(pantry.map(p => p.name), preferences);
+                        setRecommendations(recs);
+                        setView('recommendations');
+                      } catch (e: any) {
                         console.error("Gemini Recipe Generation Error:", e);
                         setErrorMessage("Error fetching recipes. Please check your API usage.");
-                        setRecommendations([]); 
-                      } finally { 
-                        setIsGenerating(false); 
-                      } 
+                        setRecommendations([]);
+                      } finally {
+                        setIsGenerating(false);
+                      }
                     }} disabled={pantry.length === 0} className="w-full py-5 bg-primary text-white rounded-2xl font-black text-xl shadow-xl hover:scale-[1.02] disabled:opacity-50 transition-all">Find Recipes</button>
                   </div>
                 </div>
@@ -480,7 +496,7 @@ const App: React.FC = () => {
                         return (
                           <div key={slot} onClick={() => { if (meal) { setSelectedRecipe(meal); setView('recipe-details'); } else { setPendingSlot({ day, slot }); setView('recommendations'); } }} className={`relative aspect-[3/4] sm:aspect-auto sm:h-52 rounded-2xl border-2 flex flex-col transition-all cursor-pointer group overflow-hidden ${meal ? 'border-transparent shadow-lg' : 'border-dashed border-slate-100 bg-slate-50/50'}`}>
                             {meal ? (
-                              <><img src={meal.image} className="absolute inset-0 w-full h-full object-cover"/><div className="absolute inset-0 bg-black/40"/><div className="mt-auto p-4 relative z-10"><p className="text-[9px] font-black text-primary uppercase mb-1">{slot}</p><h4 className="text-white font-black text-xs line-clamp-2">{meal.title}</h4></div></>
+                              <><img src={meal.image} className="absolute inset-0 w-full h-full object-cover" /><div className="absolute inset-0 bg-black/40" /><div className="mt-auto p-4 relative z-10"><p className="text-[9px] font-black text-primary uppercase mb-1">{slot}</p><h4 className="text-white font-black text-xs line-clamp-2">{meal.title}</h4></div></>
                             ) : (
                               <div className="flex-1 flex flex-col items-center justify-center gap-3 p-4 text-center">
                                 <span className="text-[9px] font-black text-slate-300 uppercase">{slot}</span>
@@ -509,7 +525,7 @@ const App: React.FC = () => {
                           <h4 className="text-[10px] font-black text-primary uppercase tracking-widest print:text-slate-900 print:text-base print:mb-2">{cat}</h4>
                           <div className="flex flex-col gap-2">{items.map(item => (
                             <div key={item.name} className="flex items-center gap-4 p-4 rounded-xl bg-slate-50 print:bg-white print:border-b print:rounded-none print:p-2">
-                              <input type="checkbox" className="size-5 rounded border-slate-200 text-primary focus:ring-primary print:hidden"/>
+                              <input type="checkbox" className="size-5 rounded border-slate-200 text-primary focus:ring-primary print:hidden" />
                               <div className="flex-1 min-w-0 font-black text-slate-900 truncate print:text-sm">{item.name}</div>
                               <div className="text-xs font-black text-primary bg-white px-2 py-1 rounded shadow-sm print:text-slate-600 print:bg-transparent print:shadow-none print:font-bold">{Math.round(item.amount * 10) / 10} {item.unit}</div>
                             </div>
@@ -593,7 +609,7 @@ const App: React.FC = () => {
                 <h2 className="text-3xl font-black uppercase">Steps</h2>
                 {selectedRecipe.steps.map((step, i) => (
                   <div key={i} className="bg-white p-8 rounded-3xl border border-slate-50 flex gap-6">
-                    <div className="size-12 rounded-full bg-primary text-white font-black text-2xl flex items-center justify-center shrink-0">{i+1}</div>
+                    <div className="size-12 rounded-full bg-primary text-white font-black text-2xl flex items-center justify-center shrink-0">{i + 1}</div>
                     <p className="text-slate-600 font-medium leading-relaxed pt-2">{step}</p>
                   </div>
                 ))}
@@ -604,7 +620,7 @@ const App: React.FC = () => {
 
       case 'profile':
         const renderProfileSubView = () => {
-          switch(profileSubView) {
+          switch (profileSubView) {
             case 'general':
               return (
                 <div className="bg-white border border-slate-100 rounded-[2.5rem] p-8 md:p-12 shadow-sm flex flex-col gap-10">
@@ -626,20 +642,20 @@ const App: React.FC = () => {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
                     <div className="flex flex-col gap-2">
                       <label className="text-xs font-black text-slate-400 uppercase tracking-widest">Full Name</label>
-                      <input type="text" value={userProfile.fullName} onChange={(e) => setUserProfile({...userProfile, fullName: e.target.value})} className="bg-slate-50 border-none rounded-xl px-4 py-4 text-sm font-black focus:ring-2 focus:ring-primary/20" />
+                      <input type="text" value={userProfile.fullName} onChange={(e) => setUserProfile({ ...userProfile, fullName: e.target.value })} className="bg-slate-50 border-none rounded-xl px-4 py-4 text-sm font-black focus:ring-2 focus:ring-primary/20" />
                     </div>
                     <div className="flex flex-col gap-2">
                       <label className="text-xs font-black text-slate-400 uppercase tracking-widest">Username</label>
-                      <input type="text" value={userProfile.username} onChange={(e) => setUserProfile({...userProfile, username: e.target.value})} className="bg-slate-50 border-none rounded-xl px-4 py-4 text-sm font-black focus:ring-2 focus:ring-primary/20" />
+                      <input type="text" value={userProfile.username} onChange={(e) => setUserProfile({ ...userProfile, username: e.target.value })} className="bg-slate-50 border-none rounded-xl px-4 py-4 text-sm font-black focus:ring-2 focus:ring-primary/20" />
                     </div>
                     <div className="flex flex-col gap-2">
                       <label className="text-xs font-black text-slate-400 uppercase tracking-widest">Email Address</label>
-                      <input type="email" value={userProfile.email} onChange={(e) => setUserProfile({...userProfile, email: e.target.value})} className="bg-slate-50 border-none rounded-xl px-4 py-4 text-sm font-black focus:ring-2 focus:ring-primary/20" />
+                      <input type="email" value={userProfile.email} onChange={(e) => setUserProfile({ ...userProfile, email: e.target.value })} className="bg-slate-50 border-none rounded-xl px-4 py-4 text-sm font-black focus:ring-2 focus:ring-primary/20" />
                     </div>
                   </div>
                   <div className="flex flex-col gap-2">
                     <label className="text-xs font-black text-slate-400 uppercase tracking-widest">Biography</label>
-                    <textarea rows={4} value={userProfile.bio} onChange={(e) => setUserProfile({...userProfile, bio: e.target.value})} className="bg-slate-50 border-none rounded-xl px-4 py-4 text-sm font-black focus:ring-2 focus:ring-primary/20 resize-none" />
+                    <textarea rows={4} value={userProfile.bio} onChange={(e) => setUserProfile({ ...userProfile, bio: e.target.value })} className="bg-slate-50 border-none rounded-xl px-4 py-4 text-sm font-black focus:ring-2 focus:ring-primary/20 resize-none" />
                   </div>
                   <div className="pt-8 border-t border-slate-50 flex justify-end items-center gap-6">
                     <button onClick={handleGeneralProfileClear} className="min-w-[140px] py-4 px-8 rounded-xl font-black bg-red-500 text-white shadow-xl hover:bg-red-600 transition-all flex items-center justify-center gap-2">
@@ -705,27 +721,27 @@ const App: React.FC = () => {
                       ))}
                     </div>
                   </div>
-                  
+
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
                     <div className="flex flex-col gap-4">
                       <h3 className="text-xl font-black text-slate-900">Allergies</h3>
                       <div className="flex h-14 bg-slate-50 rounded-xl overflow-hidden px-4 gap-2 focus-within:ring-2 focus-within:ring-primary/20">
-                        <input 
-                          type="text" 
-                          value={allergyInput} 
-                          onChange={(e) => setAllergyInput(e.target.value)} 
+                        <input
+                          type="text"
+                          value={allergyInput}
+                          onChange={(e) => setAllergyInput(e.target.value)}
                           onKeyDown={(e) => {
                             if (e.key === 'Enter' && allergyInput.trim()) {
-                              setPreferences({...preferences, allergies: [...preferences.allergies, allergyInput.trim()]});
+                              setPreferences({ ...preferences, allergies: [...preferences.allergies, allergyInput.trim()] });
                               setAllergyInput('');
                             }
                           }}
-                          placeholder="Add allergy..." 
-                          className="flex-1 bg-transparent border-none focus:ring-0 text-sm font-bold" 
+                          placeholder="Add allergy..."
+                          className="flex-1 bg-transparent border-none focus:ring-0 text-sm font-bold"
                         />
                         <button onClick={() => {
                           if (allergyInput.trim()) {
-                            setPreferences({...preferences, allergies: [...preferences.allergies, allergyInput.trim()]});
+                            setPreferences({ ...preferences, allergies: [...preferences.allergies, allergyInput.trim()] });
                             setAllergyInput('');
                           }
                         }} className="text-primary font-black">Add</button>
@@ -734,7 +750,7 @@ const App: React.FC = () => {
                         {preferences.allergies.map((allergy, i) => (
                           <div key={i} className="bg-slate-900 text-white px-4 py-2 rounded-full text-xs font-black flex items-center gap-2">
                             {allergy}
-                            <button onClick={() => setPreferences({...preferences, allergies: preferences.allergies.filter((_, idx) => idx !== i)})} className="material-symbols-outlined !text-[14px]">close</button>
+                            <button onClick={() => setPreferences({ ...preferences, allergies: preferences.allergies.filter((_, idx) => idx !== i) })} className="material-symbols-outlined !text-[14px]">close</button>
                           </div>
                         ))}
                       </div>
@@ -743,22 +759,22 @@ const App: React.FC = () => {
                     <div className="flex flex-col gap-4">
                       <h3 className="text-xl font-black text-slate-900">Dislikes</h3>
                       <div className="flex h-14 bg-slate-50 rounded-xl overflow-hidden px-4 gap-2 focus-within:ring-2 focus-within:ring-primary/20">
-                        <input 
-                          type="text" 
-                          value={dislikeInput} 
-                          onChange={(e) => setDislikeInput(e.target.value)} 
+                        <input
+                          type="text"
+                          value={dislikeInput}
+                          onChange={(e) => setDislikeInput(e.target.value)}
                           onKeyDown={(e) => {
                             if (e.key === 'Enter' && dislikeInput.trim()) {
-                              setPreferences({...preferences, dislikes: [...preferences.dislikes, dislikeInput.trim()]});
+                              setPreferences({ ...preferences, dislikes: [...preferences.dislikes, dislikeInput.trim()] });
                               setDislikeInput('');
                             }
                           }}
-                          placeholder="Add dislike..." 
-                          className="flex-1 bg-transparent border-none focus:ring-0 text-sm font-bold" 
+                          placeholder="Add dislike..."
+                          className="flex-1 bg-transparent border-none focus:ring-0 text-sm font-bold"
                         />
                         <button onClick={() => {
                           if (dislikeInput.trim()) {
-                            setPreferences({...preferences, dislikes: [...preferences.dislikes, dislikeInput.trim()]});
+                            setPreferences({ ...preferences, dislikes: [...preferences.dislikes, dislikeInput.trim()] });
                             setDislikeInput('');
                           }
                         }} className="text-primary font-black">Add</button>
@@ -767,7 +783,7 @@ const App: React.FC = () => {
                         {preferences.dislikes.map((dislike, i) => (
                           <div key={i} className="bg-slate-100 text-slate-600 px-4 py-2 rounded-full text-xs font-black flex items-center gap-2 border border-slate-200">
                             {dislike}
-                            <button onClick={() => setPreferences({...preferences, dislikes: preferences.dislikes.filter((_, idx) => idx !== i)})} className="material-symbols-outlined !text-[14px]">close</button>
+                            <button onClick={() => setPreferences({ ...preferences, dislikes: preferences.dislikes.filter((_, idx) => idx !== i) })} className="material-symbols-outlined !text-[14px]">close</button>
                           </div>
                         ))}
                       </div>
@@ -824,16 +840,15 @@ const App: React.FC = () => {
                   { id: 'dietary', icon: 'restaurant_menu', label: 'Dietary Preferences' },
                   { id: 'notifications', icon: 'notifications', label: 'Notifications' },
                 ].map((item) => (
-                  <button 
-                    key={item.id} 
-                    onClick={() => setProfileSubView(item.id as any)} 
-                    className={`flex items-center gap-4 px-6 py-4 rounded-2xl font-black text-sm transition-all border-l-4 ${
-                      profileSubView === item.id 
-                        ? 'bg-primary/10 text-primary-dark border-primary shadow-sm' 
+                  <button
+                    key={item.id}
+                    onClick={() => setProfileSubView(item.id as any)}
+                    className={`flex items-center gap-4 px-6 py-4 rounded-2xl font-black text-sm transition-all border-l-4 ${profileSubView === item.id
+                        ? 'bg-primary/10 text-primary-dark border-primary shadow-sm'
                         : 'text-slate-400 border-transparent hover:bg-slate-50 hover:text-slate-600'
-                    }`}
+                      }`}
                   >
-                    <span className="material-symbols-outlined !text-[22px]">{item.icon}</span> 
+                    <span className="material-symbols-outlined !text-[22px]">{item.icon}</span>
                     {item.label}
                   </button>
                 ))}
