@@ -1,0 +1,8 @@
+{
+  "name": "AI Chef - Testing",
+  "description": "A comprehensive AI-powered kitchen assistant that generates recipes from your fridge, manages your pantry, and creates personalized shopping lists.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
